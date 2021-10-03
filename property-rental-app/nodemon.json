@@ -1,0 +1,7 @@
+ {
+     "env": {
+         "DB_USER": "nationwide",
+         "DB_PASSWORD": "openNationwide",
+         "DB_NAME": "nationwide-property-rental"
+     }
+ }
