@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, FormEvent, ChangeEvent } from 'react';
+import { useState, useRef, useReducer, ChangeEvent } from 'react';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
@@ -7,44 +7,32 @@ import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import Select, { SelectChangeEvent } from '@mui/material/Select';
-import PropTypes, { InferProps } from 'prop-types';
 import moment from 'moment';
+import { formReducer, initialState } from '../../../hooks/formhandler-hook';
 
-const ViewModes = {
-    ADD: 0,
-    UPDATE: 1
-};
+interface PropertyFormProps {
+  onSubmitHandler(details: Object): any 
+}
+function PropertyForm(props: PropertyFormProps) {
 
-function PropertyForm({ viewMode, address: addressFromProps, propertyType: propertyTypeFromProps, availableDate: availableDateFromProps }: InferProps<typeof PropertyForm.propTypes>) {
-
+  const [state, dispatch] = useReducer(formReducer, initialState);
   const fileInputRef = useRef(null);
-  const [moveInAvailableDate, setMoveInAvailableDate] = useState('');
-  const [propertyType, setPropertyType] = useState('');
-  const [price, setPrice] = useState('');
-  const [description, setDescription] = useState('');
   const [imageFiles, setImageFiles] = useState({});
   const [validationError, setValidationError] = useState('');
-  const [address, setAddress] = useState('');
 
-  const handleAddNewProperty = (event: FormEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    console.log('Adding new property...');
-    const propertyDetails = {
-      'address': address,
-      'availableDate': moveInAvailableDate? moment(moveInAvailableDate).toISOString(): '',
-      'description': description,
-      'images': imageFiles,
-      'price': price,
-      'type': propertyType,
-    };
-    console.log(propertyDetails);
+  const dispatchFormInputAction = (field: string, value: string) => dispatch({type: 'field', field, value})
+
+  const formSubmitClickHandler = () => {
+    console.log('submitting form data..');
+    props.onSubmitHandler(state);
   }
+
   const handleOnFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     try{
       const target = event.target as HTMLInputElement;
       const files = target.files as FileList;
       if(files.length > 2) {
-        throw 'Sorry, only two files can be uploaded';
+        throw new Error('Sorry, only two files can be uploaded');
       }
       setImageFiles({files});
     }
@@ -54,16 +42,9 @@ function PropertyForm({ viewMode, address: addressFromProps, propertyType: prope
     }
   }
 
-  useEffect(() => {
-    console.log(addressFromProps);
-    addressFromProps && setAddress(addressFromProps);
-    availableDateFromProps && setMoveInAvailableDate(availableDateFromProps);
-    propertyTypeFromProps && setPropertyType(propertyTypeFromProps);
-  }, [addressFromProps, propertyTypeFromProps])
-
   const handleChange = (event: SelectChangeEvent) => {
-    setPropertyType(event.target.value as string);
-  };
+    dispatchFormInputAction('propertyType', event.target.value);
+  }
 
   return (
     <Box
@@ -76,15 +57,14 @@ function PropertyForm({ viewMode, address: addressFromProps, propertyType: prope
       autoComplete="off"
     >
       <div>
-          <h4>Add new property</h4>
           <h5>{validationError}</h5>
           <div>
             <TextField
             id="outlined-address"
             label="Address"
             helperText="Property address"
-            value = {address}
-            onChange={(e) => { setAddress(e.currentTarget.value)}}
+            value = {state.address}
+            onChange={(e) => dispatchFormInputAction('propertyType', e.currentTarget.value)}
             />
           </div>
           <div>
@@ -93,9 +73,9 @@ function PropertyForm({ viewMode, address: addressFromProps, propertyType: prope
             label="Description"
             multiline
             maxRows={10}
-            value={description}
+            value={state.description}
             helperText="Detailed description of the property"
-            onChange={(e) => { setDescription(e.currentTarget.value)}}
+            onChange={(e) => dispatchFormInputAction('description', e.currentTarget.value)}
             />
           </div>
           <div>
@@ -103,17 +83,18 @@ function PropertyForm({ viewMode, address: addressFromProps, propertyType: prope
             id="outlined-price"
             label="Price"
             helperText=""
-            value={price}
-            onChange={(e) => { setPrice(e.currentTarget.value)}}
+            value={state.price}
+            onChange={(e) => dispatchFormInputAction('price', e.currentTarget.value)}
             />
           </div>
           <div>
               <FormControl fullWidth>
                 <DatePicker
                   label="Date available"
-                  value={moveInAvailableDate}
+                  value={state.moveInAvailableDate}
                   onChange={(newValue) => {
-                  setMoveInAvailableDate(moment(newValue).toISOString());
+                    const availableDate = moment(newValue).toISOString();
+                    dispatchFormInputAction('availableDate', availableDate);
                   }}
                   renderInput={(params) => <TextField {...params} />}
                 />
@@ -126,7 +107,7 @@ function PropertyForm({ viewMode, address: addressFromProps, propertyType: prope
             <Select
               labelId="demo-simple-select-label"
               id="demo-simple-select"
-              value={propertyType}
+              value={state.propertyType}
               label="Property Type"
               onChange={handleChange}
             >
@@ -135,6 +116,14 @@ function PropertyForm({ viewMode, address: addressFromProps, propertyType: prope
               <MenuItem value='House'>House</MenuItem>
             </Select>
           </FormControl>
+          </div>
+          <div>
+            <FormControl fullWidth>
+              <InputLabel id="demo-simple-select-label">Property Type</InputLabel>
+              <Button variant="contained" component="span"  onClick={formSubmitClickHandler}>
+                  Submit
+              </Button>
+            </FormControl>
           </div>
           <div>
 
@@ -156,31 +145,10 @@ function PropertyForm({ viewMode, address: addressFromProps, propertyType: prope
             </label> 
           </div>
         </div>
-          {
-              viewMode === ViewModes.ADD &&
-              <Button variant="contained" onClick={handleAddNewProperty}>Add Property</Button>
-          }
-          {
-              viewMode === ViewModes.UPDATE &&
-              <Button variant="contained" type="submit">Edit Property</Button>
-          }
       </div>
 
     </Box>
   );
 }
-
-PropertyForm.defaultProps = {
-    viewMode: ViewModes.ADD,
-    address: '',
-    propertyType: '',
-    availableDate: ''
-}
-PropertyForm.propTypes = {
-    viewMode: PropTypes.number,
-    address: PropTypes.string,
-    propertyType: PropTypes.string,
-    availableDate: PropTypes.string
-} 
 
 export default PropertyForm;
